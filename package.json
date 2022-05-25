@@ -1,6 +1,11 @@
 {
   "name": "hello-world-cpp",
 	"displayName": "Hello World C++",
+    "publisher": "DanielZoltanNagy",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/AmetistDrake/Hello-World-Cpp.git"
+    },  
 	"description": "Generating C++ configuration files for linting, building and launching applications.",
 	"version": "0.0.1",
 	"engines": {
