@@ -15,7 +15,8 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:cpp-builder.helloWorldCpp"
+        "onCommand:cpp-builder.helloWorldCpp",
+        "onCommand:cpp-builder.helloWorldCppWithTests"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -23,6 +24,10 @@
 			{
 				"command": "cpp-builder.helloWorldCpp",
 				"title": "Hello World C++"
+			}, 
+            {
+				"command": "cpp-builder.helloWorldCppWithTests",
+				"title": "Hello World C++ With Tests"
 			}
 		]
 	},

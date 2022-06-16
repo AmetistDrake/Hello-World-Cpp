@@ -6,9 +6,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('cpp-builder.helloWorldCpp', () => {
-            generator.execute();
+            generator.execute_basic();
+        }),
+
+        vscode.commands.registerCommand('cpp-builder.helloWorldCppWithTests', () => {
+            generator.execute_with_tests();
         })
-    );
+    )
 }
 
 
