@@ -17,7 +17,16 @@ const propertiesContent =
     "configurations": [
         {
             "name": "Config with CMake",
-            "compileCommands": "\${workspaceFolder}/build/compile_commands.json"
+            "intelliSenseMode": "\${default}",
+            "includePath": ["\${workspaceFolder}/**"],
+            "compilerPath": "",
+            "compilerArgs": [],
+            "compileCommands": "\${workspaceFolder}/build/compile_commands.json",
+            "browse": {
+                "path": ["\${workspaceFolder}"],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            }
         }
     ],
     "version": 4
@@ -149,7 +158,7 @@ function getTaskContent(exeName: string, isTest: boolean) {
                 "command": "cmake -DCMAKE_CXX_COMPILER=/usr/bin/g++ .."
             },
             "windows": {
-             "command": "cmake -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/g++.exe .."
+                "command": "cmake -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/g++.exe .."
             },
             "dependsOn": [
                 "Make build folder"
@@ -165,7 +174,7 @@ function getTaskContent(exeName: string, isTest: boolean) {
                 "command": "cmake -DCMAKE_CXX_COMPILER=/usr/bin/clang++ .."
             },
             "windows": {
-             "command": "cmake -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/clang++.exe .."
+                "command": "cmake -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/clang++.exe .."
             },
             "dependsOn": [
                 "Make build folder"
@@ -216,7 +225,7 @@ function getTaskContent(exeName: string, isTest: boolean) {
     return tasksContent
 }
 
-function getLaunchContent(exeName:string, isTest: boolean) {
+function getLaunchContent(exeName: string, isTest: boolean) {
     const testing = `{
             "name": "(gdb) Launch test",
             "type": "cppdbg",
@@ -280,21 +289,13 @@ function getCmakeContent(exeName: string, isTest: boolean) {
     const cmakeContent =
         `cmake_minimum_required(VERSION 3.10)
 project(${exeName} VERSION 1.0 LANGUAGES CXX)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-add_executable(\${PROJECT_NAME} main.cpp)
-set_target_properties(\${PROJECT_NAME}
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
-    RUNTIME_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/bin"
-)
-`
-    const cmakeContentWithTest =
-        `cmake_minimum_required(VERSION 3.10)
-project(${exeName} VERSION 1.0 LANGUAGES CXX)
-
+${isTest ? `
+option(BUILD_TESTS "" ON)
+if (BUILD_TESTS)
+message(STATUS "Building tests")
+add_subdirectory(tests)
+endif()
+` : ``}
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
@@ -325,35 +326,28 @@ set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
 -Wundef")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \
+set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
 -Wlogical-op \\
 -Wstrict-null-sentinel \\
 -Wnoexcept")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") 
 set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
--fsanitize=address \\
+-fsanitize=memory \\
+-fsanitize-memory-track-origins=2 \\
+-fno-sanitize-memory-use-after-dtor \\
 -fsanitize=undefined \\
 -fsanitize=float-divide-by-zero \\
--fsanitize=float-cast-overflow \\
--fsanitize=signed-integer-overflow,null,alignment \\
--fsanitize-trap=alignment \\
--fno-sanitize-recover=all \\
--fno-sanitize=null \\
--fno-sanitize=alignment \\
+-fsanitize=unsigned-integer-overflow \\
+-fsanitize=implicit-conversion \\
+-fsanitize=local-bounds \\
+-fsanitize=nullability \\
 -fno-omit-frame-pointer")
 endif()
 
-option(BUILD_TESTS "" ON)
-if (BUILD_TESTS)
-    message(STATUS "Building tests")
-    add_subdirectory(tests)
-endif()
-
-FILE(GLOB SRC_FILES src/*.cpp)
+${isTest ?
+            `FILE(GLOB SRC_FILES src/*.cpp)
 add_executable(\${PROJECT_NAME} \${SRC_FILES})
-target_include_directories(\${PROJECT_NAME} PRIVATE
-    include
-)
+target_include_directories(\${PROJECT_NAME} PRIVATE include)
 set_target_properties(\${PROJECT_NAME}
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
@@ -363,7 +357,15 @@ set_target_properties(\${PROJECT_NAME}
 target_compile_features(\${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(\${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
-file(COPY assets/ DESTINATION \${CMAKE_BINARY_DIR}/assets)
+file(COPY assets/ DESTINATION \${CMAKE_BINARY_DIR}/assets)` :
+
+            `add_executable(\${PROJECT_NAME} main.cpp)
+set_target_properties(\${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/bin"
+)`}
 
 set(CPACK_PROJECT_NAME \${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION \${PROJECT_VERSION})
@@ -373,10 +375,11 @@ install(TARGETS \${PROJECT_NAME}
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
-install(DIRECTORY assets DESTINATION .)
+${isTest ?
+            `install(DIRECTORY assets DESTINATION .)` : ``}
 include(CPack)
 `
-    return (isTest ? cmakeContentWithTest : cmakeContent)
+    return cmakeContent
 }
 
 
