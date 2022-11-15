@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { win32 } from 'path';
 
 const isWin = process.platform === "win32";
 
@@ -462,9 +461,8 @@ export class Generator {
             } else {
                 this.workspaceFolder = vscode.workspace.workspaceFolders[0].uri.path;
             }
-            if (win32) {
+            if (isWin) {
                 this.workspaceFolder = this.workspaceFolder?.substring(1)
-                console.log(this.workspaceFolder)
             }
         } else {
             vscode.window.showErrorMessage(
@@ -486,13 +484,12 @@ export class Generator {
 
             console.log(vscodeDir)
             try {
-                fs.mkdirSync("C:/Home/cpp_test/.vscode", {recursive: true})
-                // vscodeDir fs.mkdirSync(vscodeDir, { recursive: true });
-                  
+                fs.mkdirSync(vscodeDir, { recursive: true });
+
                 fs.writeFileSync(vscodeDir + "c_cpp_properties.json", propertiesContent);
                 fs.writeFileSync(vscodeDir + "launch.json", getLaunchContent(exeName, false));
                 fs.writeFileSync(vscodeDir + "tasks.json", getTaskContent(exeName, false));
-                
+
                 if (!fs.existsSync(mainCppFile)) {
                     fs.writeFileSync(mainCppFile, mainCppContent);
                 } else {
@@ -540,7 +537,7 @@ export class Generator {
             let cmake: string = this.workspaceFolder + "/CMakeLists.txt";
             let clangFormatFile: string = this.workspaceFolder + "/.clang-format";
             let mainCpp: string = srcDir + "main.cpp";
-            
+
             try {
                 fs.mkdirSync(vscodeDir, { recursive: true });
                 fs.mkdirSync(testDir, { recursive: true });
