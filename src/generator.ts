@@ -19,16 +19,7 @@ const propertiesContent =
     "configurations": [
         {
             "name": "Config with CMake",
-            "intelliSenseMode": "\${default}",
-            "includePath": ["\${workspaceFolder}/**"],
-            "compilerPath": "",
-            "compilerArgs": [],
             "compileCommands": "\${workspaceFolder}/build/compile_commands.json",
-            "browse": {
-                "path": ["\${workspaceFolder}"],
-                "limitSymbolsToIncludedHeaders": true,
-                "databaseFilename": ""
-            }
         }
     ],
     "version": 4
@@ -124,17 +115,16 @@ UseTab: Never
 
 function getTaskContent(exeName: string, isTest: boolean) {
     const testing = `{
-    "label": "Tests",
-    "type": "shell",
-    "options": {
-        "cwd": "\${workspaceRoot}/build/tests"
-    },
-    "command": "ctest",
-    "dependsOn": [
-        "Build"
-    ]
-},
-`
+            "label": "Tests",
+            "type": "shell",
+            "options": {
+                "cwd": "\${workspaceRoot}/build/tests"
+            },
+            "command": "ctest",
+            "dependsOn": [
+                "Build"
+            ]
+        },`
 
     const tasksContent =
         `{
@@ -294,11 +284,13 @@ project(${exeName} VERSION 1.0 LANGUAGES CXX)
 ${isTest ? `
 option(BUILD_TESTS "" ON)
 if (BUILD_TESTS)
-message(STATUS "Building tests")
-add_subdirectory(tests)
+    message(STATUS "Building tests")
+    add_subdirectory(tests)
 endif()
 ` : ``}
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
 -pedantic \\
