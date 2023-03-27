@@ -7,7 +7,7 @@
         "url": "https://github.com/AmetistDrake/Hello-World-Cpp.git"
     },  
 	"description": "Generating C++ configuration files for linting, building and launching applications.",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"engines": {
 		"vscode": "^1.67.0"
 	},
