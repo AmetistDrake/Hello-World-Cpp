@@ -30,18 +30,15 @@ const clangformatContent =
     `AccessModifierOffset: -3
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
-#AlignConsecutiveBitFields: false
 AlignConsecutiveDeclarations: false
 AlignConsecutiveMacros: false
 AlignEscapedNewlines: Right
-#AlignOperands: AlignAfterOperator
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: false
 AllowAllConstructorInitializersOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
-#AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: Empty
@@ -51,8 +48,7 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
 BinPackParameters: false
-#BitFieldColonSpacing: Both
-BreakBeforeBraces: Attach # Custom # or Allman
+BreakBeforeBraces: Attach
 BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true
@@ -65,8 +61,6 @@ BraceWrapping:
   AfterExternBlock: false
   BeforeCatch: true
   BeforeElse: true
-  #BeforeLambdaBody: false
-  #BeforeWhile: false
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
@@ -80,7 +74,6 @@ Cpp11BracedListStyle: true
 PointerAlignment: Left
 FixNamespaceComments: true
 IncludeBlocks: Preserve
-#IndentCaseBlocks: false
 IndentCaseLabels: true
 IndentGotoLabels: false
 IndentPPDirectives: BeforeHash
@@ -108,7 +101,7 @@ SpacesInConditionalStatement: false
 SpacesInContainerLiterals: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: c++11
+Standard: c++17
 TabWidth: 4
 UseTab: Never
 `
@@ -131,7 +124,7 @@ function getTaskContent(exeName: string, isTest: boolean) {
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Make build folder",
+            "label": "Setup",
             "type": "shell",
             "linux": {
                 "command": "mkdir -p ./build"
@@ -141,74 +134,46 @@ function getTaskContent(exeName: string, isTest: boolean) {
             }
         },
         {
-            "label": "Compile GNU",
+            "label": "Build",
             "type": "shell",
             "options": {
                 "cwd": "\${workspaceRoot}/build"
             },
-            "linux": {
-                "command": "cmake -DCMAKE_CXX_COMPILER=/usr/bin/g++ .."
-            },
-            "windows": {
-                "command": "cmake -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/g++.exe .."
-            },
+            "command": "cmake .. && cmake --build .",
             "dependsOn": [
-                "Make build folder"
-            ]
-        },
-        {
-            "label": "Compile Clang",
-            "type": "shell",
-            "options": {
-                "cwd": "\${workspaceRoot}/build"
-            },
-            "linux": {
-                "command": "cmake -DCMAKE_CXX_COMPILER=/usr/bin/clang++ .."
-            },
-            "windows": {
-                "command": "cmake -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/clang++.exe .."
-            },
-            "dependsOn": [
-                "Make build folder"
-            ]
-        },
-        {
-            "label": "Build GNU",
-            "type": "shell",
-            "options": {
-                "cwd": "\${workspaceRoot}/build"
-            },
-            "linux": {
-                "command": "make"
-            },
-            "windows": {
-                "command": "ninja"
-            },
+                "Setup"
+            ],
             "group": {
                 "kind": "build",
             },
-            "dependsOn": [
-                "Compile GNU"
-            ],
         },
         {
-            "label": "Build Clang",
+            "label": "Conan GNU",
             "type": "shell",
             "options": {
-                "cwd": "\${workspaceRoot}/build"
+                "cwd": "\${workspaceRoot}"
             },
-            "linux": {
-                "command": "make"
-            },
-            "windows": {
-                "command": "ninja"
-            },
+            "command": "conan install . --output-folder=build -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 -b missing",
+            "dependsOn": [
+                "Setup"
+            ],
             "group": {
                 "kind": "build",
             },
+        },
+        {
+            "label": "Conan Clang",
+            "type": "shell",
+            "options": {
+                "cwd": "\${workspaceRoot}"
+            },
+            "command": "conan install . --output-folder=build -s compiler=clang -s compiler.version=14 -b missing",
             "dependsOn": [
-                "Compile Clang"
+                "Setup"
             ],
+            "group": {
+                "kind": "build",
+            },
         },
         ${isTest ? testing : ``}
     ]
@@ -219,7 +184,7 @@ function getTaskContent(exeName: string, isTest: boolean) {
 
 function getLaunchContent(exeName: string, isTest: boolean) {
     const testing = `{
-            "name": "(gdb) Launch test",
+            "name": "${exeName}_test",
             "type": "cppdbg",
             "request": "launch",
             "program": "\${workspaceRoot}/build/tests/${exeName}_test",
@@ -247,7 +212,7 @@ function getLaunchContent(exeName: string, isTest: boolean) {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch app",
+            "name": "${exeName}",
             "type": "cppdbg",
             "request": "launch",
             "program": "\${workspaceRoot}/build/bin/${exeName}",
@@ -280,7 +245,7 @@ function getLaunchContent(exeName: string, isTest: boolean) {
 function getCmakeContent(exeName: string, isTest: boolean) {
     const cmakeContent =
         `cmake_minimum_required(VERSION 3.10)
-project(${exeName} VERSION 1.0 LANGUAGES CXX)
+project(${exeName} VERSION 1.0 LANGUAGES C CXX)
 ${isTest ? `
 option(BUILD_TESTS "" ON)
 if (BUILD_TESTS)
@@ -288,75 +253,54 @@ if (BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 ` : ``}
+list(APPEND CMAKE_PREFIX_PATH "build")
+# append find package commands after this
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY \${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY \${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY \${CMAKE_BINARY_DIR}/lib)
 
-set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
--pedantic \\
--Wall \\
--Wextra \\
--Wcast-align \\
--Wcast-qual \\
--Wnon-virtual-dtor \\
--Wdisabled-optimization \\
--Wformat=2 \\
--Winit-self \\
--Wmissing-declarations \\
--Wmissing-include-dirs \\
--Wold-style-cast \\
--Woverloaded-virtual \\
--Wredundant-decls \\
--Wshadow \\
--Wsign-conversion \\
--Wconversion \\
--Wdouble-promotion \\
--Wnull-dereference \\
--Wsign-promo \\
--Wstrict-overflow=5 \\
--Wunused \\
--Wswitch-default \\
--Wctor-dtor-privacy \\
--Wundef")
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
--Wlogical-op \\
--Wstrict-null-sentinel \\
--Wnoexcept")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") 
-set(CMAKE_CXX_FLAGS "\${CMAKE_CXX_FLAGS} \\
--fsanitize=undefined \\
--fsanitize=float-divide-by-zero \\
--fsanitize=unsigned-integer-overflow \\
--fsanitize=implicit-conversion \\
--fsanitize=local-bounds \\
--fsanitize=nullability \\
--fno-omit-frame-pointer")
-endif()
+add_compile_options(
+    -pedantic
+    -Wall
+    -Wextra
+    -Wcast-align
+    -Wcast-qual
+    -Wnon-virtual-dtor
+    -Wdisabled-optimization
+    -Wformat=2
+    -Winit-self
+    -Wmissing-declarations
+    -Wmissing-include-dirs
+    -Wold-style-cast
+    -Woverloaded-virtual
+    -Wredundant-decls
+    -Wshadow
+    -Wsign-conversion
+    -Wconversion
+    -Wdouble-promotion
+    -Wnull-dereference
+    -Wsign-promo
+    -Wstrict-overflow=5
+    -Wunused
+    -Wswitch-default
+    -Wctor-dtor-privacy
+    -Wundef
+)
 
 ${isTest ?
             `FILE(GLOB SRC_FILES src/*.cpp)
-add_executable(\${PROJECT_NAME} \${SRC_FILES})
-target_include_directories(\${PROJECT_NAME} PRIVATE include)
-set_target_properties(\${PROJECT_NAME}
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
-    RUNTIME_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/bin"
-)
-target_compile_features(\${PROJECT_NAME} PUBLIC cxx_std_17)
-set_target_properties(\${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
+add_executable(${exeName} \${SRC_FILES})
+target_include_directories(${exeName} PRIVATE include)
 
 file(COPY assets/ DESTINATION \${CMAKE_BINARY_DIR}/assets)` :
 
-            `add_executable(\${PROJECT_NAME} main.cpp)
-set_target_properties(\${PROJECT_NAME}
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib"
-    RUNTIME_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/bin"
-)`}
+            `add_executable(${exeName} main.cpp)`}
 
 set(CPACK_PROJECT_NAME \${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION \${PROJECT_VERSION})
